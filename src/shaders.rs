@@ -1,4 +1,4 @@
-type Result<T> = Result<T, Box<dyn std::error::Error>>;
+use crate::Error;
 
 #[derive(Debug, Clone, Default)]
 pub struct ShaderCode {
@@ -122,7 +122,7 @@ impl ProgramBuilder {
         self
     }
 
-    pub fn build(&self) -> Result<u32> {
+    pub fn build(&self) -> Result<u32, Box<dyn std::error::Error>> {
         let mut shaders = Vec::new();
         for shader_type in ShaderType::each().iter() {
             if let Some(ref code) = self.code[*shader_type] {
@@ -134,7 +134,7 @@ impl ProgramBuilder {
     }
 }
 
-pub fn compile_shader(code : &str, shader_type : ShaderType) -> Result<u32> {
+pub fn compile_shader(code : &str, shader_type : ShaderType) -> Result<u32, Box<dyn std::error::Error>> {
     unsafe {
         let gl_type = shader_type.as_gl_enum();
         let shader = gl::CreateShader(gl_type);
@@ -164,7 +164,7 @@ pub fn compile_shader(code : &str, shader_type : ShaderType) -> Result<u32> {
     }
 }
 
-pub fn create_program(shaders : &[u32], delete_shaders : bool) -> Result<u32> {
+pub fn create_program(shaders : &[u32], delete_shaders : bool) -> Result<u32, Box<dyn std::error::Error>> {
     unsafe {
         let program = gl::CreateProgram();
         for &shader in shaders {
@@ -199,29 +199,29 @@ pub fn create_program(shaders : &[u32], delete_shaders : bool) -> Result<u32> {
     }
 }
 
-pub fn get_attribute_location(program: u32, name: &str) -> Result<i32> {
+pub fn get_attribute_location(program: u32, name: &str) -> Result<i32, Box<dyn std::error::Error>> {
     let name_cstr = std::ffi::CString::new(name)?;
-    get_attribute_location_cstr(program, &name_cstr)
+    Ok(get_attribute_location_cstr(program, &name_cstr)?)
 }
 
-pub fn get_attribute_location_cstr(program: u32, name: &std::ffi::CStr) -> Result<i32> {
+pub fn get_attribute_location_cstr(program: u32, name: &std::ffi::CStr) -> Result<i32, Error> {
     let loc = unsafe { gl::GetAttribLocation(program, name.as_ptr()) };
     if loc == -1 {
-        Err(format!("could not find attribute {}", name.to_string_lossy()))
+        Err(Error::new(format!("could not find attribute {}", name.to_string_lossy())))
     } else {
         Ok(loc)
     }
 }
 
-pub fn get_uniform_location(program: u32, name: &str) -> Result<i32> {
+pub fn get_uniform_location(program: u32, name: &str) -> Result<i32, Box<dyn std::error::Error>> {
     let name_cstr = std::ffi::CString::new(name)?;
-    get_uniform_location_cstr(program, &name_cstr)
+    Ok(get_uniform_location_cstr(program, &name_cstr)?)
 }
 
-pub fn get_uniform_location_cstr(program: u32, name: &std::ffi::CStr) -> Result<i32> {
+pub fn get_uniform_location_cstr(program: u32, name: &std::ffi::CStr) -> Result<i32, Error> {
     let loc = unsafe { gl::GetUniformLocation(program, name.as_ptr()) };
     if loc == -1 {
-        Err(format!("could not find uniform {}", name.to_string_lossy()))
+        Err(Error::new(format!("could not find uniform {}", name.to_string_lossy())))
     } else {
         Ok(loc)
     }
